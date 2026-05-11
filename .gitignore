@@ -1,0 +1,24 @@
+node_modules
+.next
+.turbo
+*.tsbuildinfo
+dist
+build
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+workers/crawler/.venv
+
+# data
+data/
+*.sqlite
+*.db
+
+# logs
+*.log
+.DS_Store

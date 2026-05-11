@@ -1,0 +1,15 @@
+{
+  "name": "top-conference-reading",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.0.9",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "dev:mcp": "pnpm --filter mcp dev",
+    "db:push": "pnpm --filter @tcr/db push",
+    "db:studio": "pnpm --filter @tcr/db studio",
+    "crawl": "uv --directory workers/crawler run python -m crawler.cli",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  }
+}

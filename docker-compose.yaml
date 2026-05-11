@@ -1,0 +1,51 @@
+# Optional self-hosted stack. Default deploy is Vercel + Neon; this file is
+# for users who'd rather run everything locally.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: tcr-postgres
+    environment:
+      POSTGRES_USER: tcr
+      POSTGRES_PASSWORD: tcr
+      POSTGRES_DB: tcr
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: tcr-web
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://tcr:tcr@postgres:5432/tcr}
+    ports:
+      - "3000:3000"
+    depends_on: [postgres]
+
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    container_name: tcr-mcp
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://tcr:tcr@postgres:5432/tcr}
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8765
+    ports:
+      - "${MCP_BIND:-127.0.0.1}:8765:8765"
+    depends_on: [postgres]
+
+  crawler:
+    build:
+      context: workers/crawler
+    container_name: tcr-crawler
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://tcr:tcr@postgres:5432/tcr}
+    command: uv run python -m crawler.cli worker
+    depends_on: [postgres]

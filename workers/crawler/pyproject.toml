@@ -1,0 +1,22 @@
+[project]
+name = "tcr-crawler"
+version = "0.1.0"
+description = "Pulls papers from OpenReview / DBLP and pushes to the TCR Postgres."
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+    "openreview-py>=1.40",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.8",
+    "litellm>=1.50",
+    "python-dotenv>=1.0",
+    "tqdm>=4.66",
+    "typer>=0.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["crawler"]
