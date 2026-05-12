@@ -2,7 +2,13 @@
   "name": "top-conference-reading",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@10.13.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
   "scripts": {
     "dev": "pnpm --filter web dev",
     "dev:mcp": "pnpm --filter mcp dev",
