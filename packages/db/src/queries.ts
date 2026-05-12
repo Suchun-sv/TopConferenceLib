@@ -65,11 +65,17 @@ export async function getPaper(id: string) {
   return rows[0] ?? null;
 }
 
-export async function topKeywords(limit = 200, excludePrimaryArea = true) {
+export type KeywordRow = {
+  id: string;
+  label: string;
+  paperCount: number;
+  recentCount: number;
+};
+
+export async function topKeywords(limit = 200, excludePrimaryArea = true): Promise<KeywordRow[]> {
   // Filter out OpenReview primary_area entries — they're track names, not topics.
-  // We detect them by checking if every link has source='primary_area'.
   if (excludePrimaryArea) {
-    return db.execute(sql`
+    const r: any = await db.execute(sql`
       select k.id, k.label, k.paper_count as "paperCount", k.recent_count as "recentCount"
       from keywords k
       where exists (
@@ -77,9 +83,10 @@ export async function topKeywords(limit = 200, excludePrimaryArea = true) {
       )
       order by k.paper_count desc
       limit ${limit}
-    `).then((r: any) => r.rows ?? r);
+    `);
+    return (r.rows ?? r) as KeywordRow[];
   }
-  return db
+  const rows = await db
     .select({
       id: keywords.id,
       label: keywords.label,
@@ -89,6 +96,7 @@ export async function topKeywords(limit = 200, excludePrimaryArea = true) {
     .from(keywords)
     .orderBy(desc(keywords.paperCount))
     .limit(limit);
+  return rows as KeywordRow[];
 }
 
 /** Sectioned listing for a venue: grouped by primary_area, alphabetical sections.
