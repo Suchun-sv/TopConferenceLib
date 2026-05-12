@@ -59,6 +59,9 @@ export const papers = pgTable(
     aiSummary: text("ai_summary"),
     aiOneliner: text("ai_oneliner"),
     aiTopics: jsonb("ai_topics").$type<string[]>().default(sql`'[]'::jsonb`).notNull(),
+    titleZh: text("title_zh"),
+    /** LLM-rated novelty / interest, 1-5. Null = not scored yet. */
+    interestScore: real("interest_score"),
 
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

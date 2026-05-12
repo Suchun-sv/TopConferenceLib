@@ -8,6 +8,13 @@
       "when": 1778538524666,
       "tag": "0000_clean_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778577432901,
+      "tag": "0001_vengeful_plazm",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,8 @@
-import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm";
-import { db } from "./index.js";
-import { keywords, marks, paperKeywords, papers, venues } from "./schema.js";
+import { and, desc, eq, ilike, inArray, ne, sql } from "drizzle-orm";
+import { db } from "./index";
+import { keywords, marks, paperKeywords, papers, venues } from "./schema";
+
+const USER = "me";
 
 export type ListFilter = {
   venueId?: string;
@@ -63,7 +65,20 @@ export async function getPaper(id: string) {
   return rows[0] ?? null;
 }
 
-export async function topKeywords(limit = 200) {
+export async function topKeywords(limit = 200, excludePrimaryArea = true) {
+  // Filter out OpenReview primary_area entries — they're track names, not topics.
+  // We detect them by checking if every link has source='primary_area'.
+  if (excludePrimaryArea) {
+    return db.execute(sql`
+      select k.id, k.label, k.paper_count as "paperCount", k.recent_count as "recentCount"
+      from keywords k
+      where exists (
+        select 1 from paper_keywords pk where pk.keyword_id = k.id and pk.source != 'primary_area'
+      )
+      order by k.paper_count desc
+      limit ${limit}
+    `).then((r: any) => r.rows ?? r);
+  }
   return db
     .select({
       id: keywords.id,
@@ -74,6 +89,42 @@ export async function topKeywords(limit = 200) {
     .from(keywords)
     .orderBy(desc(keywords.paperCount))
     .limit(limit);
+}
+
+/** Sectioned listing for a venue: grouped by primary_area, alphabetical sections.
+ *  Within section, ordered by decision tier (oral → spotlight → poster), then interest_score. */
+export async function listPapersForVenueSectioned(venueId: string) {
+  const rows: any = await db.execute(sql`
+    select
+      p.id, p.title, p.title_zh as "titleZh", p.authors, p.decision,
+      p.interest_score as "interestScore",
+      p.openreview_url as "openreviewUrl", p.pdf_url as "pdfUrl",
+      coalesce(p.primary_area, '(uncategorized)') as "primaryArea",
+      coalesce(m.liked, false) as liked,
+      coalesce(m.later, false) as later
+    from papers p
+    left join marks m on m.paper_id = p.id and m.user_id = ${USER}
+    where p.venue_id = ${venueId}
+      and (m.hidden is null or m.hidden = false)
+    order by
+      coalesce(p.primary_area, 'zzz') asc,
+      case p.decision
+        when 'accept-oral' then 1
+        when 'accept-spotlight' then 2
+        when 'accept-poster' then 3
+        when 'accept' then 3
+        else 9 end asc,
+      p.interest_score desc nulls last,
+      p.title asc
+  `).then((r: any) => r.rows ?? r);
+  return rows as Array<{
+    id: string; title: string; titleZh: string | null;
+    authors: string[]; decision: string | null;
+    interestScore: number | null;
+    openreviewUrl: string | null; pdfUrl: string | null;
+    primaryArea: string;
+    liked: boolean; later: boolean;
+  }>;
 }
 
 export async function listVenues() {

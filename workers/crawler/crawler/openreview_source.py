@@ -44,8 +44,17 @@ def _client():
     )
 
 
-def fetch_venue(venue_id: str, max_papers: Optional[int] = None) -> list[PaperRecord]:
-    """Pull every submission for a venue."""
+def fetch_venue(
+    venue_id: str,
+    max_papers: Optional[int] = None,
+    fetch_reviews: bool = False,
+) -> list[PaperRecord]:
+    """Pull every submission for a venue.
+
+    Reviews are expensive (1 extra API call per paper) and on most public venues
+    require login to see ratings — off by default. Use `fetch_reviews=True`
+    after you set OPENREVIEW_USERNAME / OPENREVIEW_PASSWORD.
+    """
     client = _client()
     log.info("Pulling submissions for %s...", venue_id)
 
@@ -55,15 +64,14 @@ def fetch_venue(venue_id: str, max_papers: Optional[int] = None) -> list[PaperRe
         submissions = submissions[:max_papers]
 
     out: list[PaperRecord] = []
-    for s in submissions:
+    from tqdm import tqdm
+    for s in tqdm(submissions, desc="parsing", unit="paper"):
         rec = _submission_to_record(s)
-        # reviews live in child notes; pulling them per-paper is expensive.
-        # For v1 keep it light; the `extract_keywords` and `summarize` jobs
-        # can later fill in reviews on demand.
-        try:
-            _attach_reviews(client, rec, s.id)
-        except Exception as e:
-            log.debug("review fetch failed for %s: %s", s.id, e)
+        if fetch_reviews:
+            try:
+                _attach_reviews(client, rec, s.id)
+            except Exception as e:
+                log.debug("review fetch failed for %s: %s", s.id, e)
         out.append(rec)
     return out
 

@@ -44,6 +44,7 @@ def crawl(
     conference: str,
     year: int,
     max_papers: Optional[int] = typer.Option(None),
+    fetch_reviews: bool = typer.Option(False, help="Also pull per-paper reviews; slow & needs OpenReview login on most venues."),
 ):
     """Ingest one conference-year via OpenReview."""
     conference = conference.upper().replace("NEURIPS", "NeurIPS")
@@ -57,7 +58,7 @@ def crawl(
     conn = connect()
     try:
         upsert_venue(conn, id=venue_id, conference=conference, year=year, openreview_id=openreview_id)
-        papers = fetch_venue(openreview_id, max_papers=max_papers)
+        papers = fetch_venue(openreview_id, max_papers=max_papers, fetch_reviews=fetch_reviews)
         log.info("Fetched %d papers", len(papers))
         upsert_papers(conn, venue_id=venue_id, papers=papers)
     finally:
