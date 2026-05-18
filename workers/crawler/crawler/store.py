@@ -216,6 +216,9 @@ def process_one_job(conn) -> bool:
         elif kind == "extract_keywords":
             # placeholder — author-supplied keywords already linked during crawl
             result = {"note": "no-op in v1; author keywords are extracted at crawl time"}
+        elif kind == "khoj_export":
+            from crawler.khoj_export import export_paper
+            result = export_paper(conn, payload["paperId"])
         else:
             raise ValueError(f"unknown job kind: {kind}")
 

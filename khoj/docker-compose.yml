@@ -1,0 +1,57 @@
+# Minimal self-hosted Khoj for TCR deep-reading hand-off.
+# Only database + server (no sandbox/searxng/computer). Anonymous single-user.
+# The TCR export folder is bind-mounted read-only at /data/khoj — point a
+# Khoj "files" content source at /data/khoj in the admin panel.
+services:
+  database:
+    image: docker.io/pgvector/pgvector:pg15
+    container_name: khoj-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - khoj_db:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  server:
+    image: ghcr.io/khoj-ai/khoj:latest
+    container_name: khoj-server
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "42110:42110"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    working_dir: /app
+    volumes:
+      - khoj_config:/root/.khoj/
+      - khoj_models:/root/.cache/torch/sentence_transformers
+      - khoj_models_hf:/root/.cache/huggingface
+      - /mnt/data/suchun/github/TopConferenceLib/data/khoj:/data/khoj:ro
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=database
+      - POSTGRES_PORT=5432
+      - KHOJ_DJANGO_SECRET_KEY=tcr-local-secret
+      - KHOJ_DEBUG=False
+      - KHOJ_ADMIN_EMAIL=admin@tcr.local
+      - KHOJ_ADMIN_PASSWORD=tcradmin
+      - KHOJ_NO_HTTPS=True
+      - KHOJ_DOMAIN=khoj.suchunsv.org
+      - KHOJ_ALLOWED_DOMAIN=127.0.0.1
+      - KHOJ_TELEMETRY_DISABLE=True
+    command: --host="0.0.0.0" --port=42110 -vv --anonymous-mode --non-interactive
+
+volumes:
+  khoj_config:
+  khoj_db:
+  khoj_models:
+  khoj_models_hf:

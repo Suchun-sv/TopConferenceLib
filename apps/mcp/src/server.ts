@@ -13,7 +13,7 @@ import { createServer } from "node:http";
 import { z } from "zod";
 
 import { db } from "@tcr/db";
-import { jobs, keywords, marks, papers, venues } from "@tcr/db/schema";
+import { jobs, keywords, marks, papers, users, venues } from "@tcr/db/schema";
 import {
   getPaper,
   listPapers,
@@ -23,7 +23,24 @@ import {
 } from "@tcr/db/queries";
 import { and, desc, eq, sql } from "drizzle-orm";
 
-const USER = "me";
+/** Resolve the user the MCP server acts on behalf of. Looks up the row by
+ *  email (MCP_USER_EMAIL), provisioning one if missing. Falls back to the
+ *  pre-account legacy account so existing local setups keep working. */
+async function resolveUserId(): Promise<string> {
+  const email = process.env.MCP_USER_EMAIL;
+  if (!email) return "usr_me_legacy";
+  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (existing[0]) return existing[0].id;
+  const buf = new Uint8Array(16);
+  crypto.getRandomValues(buf);
+  let n = 0n;
+  for (const b of buf) n = (n << 8n) | BigInt(b);
+  const id = "usr_" + n.toString(36);
+  await db.insert(users).values({ id, email });
+  return id;
+}
+
+const USER_ID = await resolveUserId();
 
 function buildServer(): McpServer {
   const mcp = new McpServer(
@@ -95,7 +112,7 @@ function buildServer(): McpServer {
       note: z.string().optional(),
     },
     async ({ id, ...patch }) => {
-      await setMark(USER, id, patch);
+      await setMark(USER_ID, id, patch);
       return { content: [{ type: "text", text: `marked ${id} ${JSON.stringify(patch)}` }] };
     },
   );
@@ -110,7 +127,7 @@ function buildServer(): McpServer {
       limit: z.number().int().min(1).max(500).default(100),
     },
     async ({ liked, later, hidden, limit }) => {
-      const conds = [eq(marks.userId, USER)];
+      const conds = [eq(marks.userId, USER_ID)];
       if (liked !== undefined) conds.push(eq(marks.liked, liked));
       if (later !== undefined) conds.push(eq(marks.later, later));
       if (hidden !== undefined) conds.push(eq(marks.hidden, hidden));

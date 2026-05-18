@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { AbstractReveal } from "./abstract-reveal";
+import { SummaryReveal } from "./summary-reveal";
+import { mdTeaser } from "@/lib/md-teaser";
 
 export type PaperListItem = {
   id: string;
   title: string;
+  titleZh?: string | null;
   authors: string[];
   venueId: string;
   decision: string | null;
@@ -10,6 +14,9 @@ export type PaperListItem = {
   stdRating: number | null;
   keywords: string[];
   aiOneliner: string | null;
+  abstractTeaser?: string | null;
+  aiSummaryV1Teaser?: string | null;
+  viewedAt?: string | null;
 };
 
 const decisionBadge: Record<string, string> = {
@@ -22,11 +29,26 @@ const decisionBadge: Record<string, string> = {
 };
 
 export function PaperCard({ p }: { p: PaperListItem }) {
+  const seen = !!p.viewedAt;
+  const previewText = p.aiSummaryV1Teaser
+    ? mdTeaser(p.aiSummaryV1Teaser)
+    : p.abstractTeaser ?? null;
   return (
-    <article className="rounded-lg border border-zinc-200 bg-white p-4 hover:shadow-sm">
+    <article
+      className={`rounded-lg border bg-white p-4 hover:shadow-sm ${
+        seen ? "border-zinc-100" : "border-zinc-200"
+      }`}
+    >
       <div className="mb-1 flex items-start justify-between gap-3">
-        <Link href={`/p/${p.id}`} className="text-base font-medium leading-snug hover:underline">
+        <Link
+          href={`/p/${p.id}`}
+          className={`text-base font-medium leading-snug hover:underline ${
+            seen ? "text-zinc-400" : ""
+          }`}
+        >
+          {seen && <span className="mr-1 text-zinc-400" title="已浏览">✓</span>}
           {p.title}
+          {p.titleZh && <span className={`ml-1 ${seen ? "text-zinc-400" : "text-zinc-500"}`}> · {p.titleZh}</span>}
         </Link>
         <div className="flex shrink-0 items-center gap-1.5 text-xs">
           {p.decision && (
@@ -50,6 +72,16 @@ export function PaperCard({ p }: { p: PaperListItem }) {
         <span className="ml-2">{p.venueId}</span>
       </p>
       {p.aiOneliner && <p className="mb-2 text-sm text-zinc-700">{p.aiOneliner}</p>}
+      {previewText && (
+        <p className={`mb-2 line-clamp-3 text-sm ${seen ? "text-zinc-400" : "text-zinc-600"}`}>
+          {previewText}
+        </p>
+      )}
+      {p.aiSummaryV1Teaser ? (
+        <SummaryReveal paperId={p.id} />
+      ) : (
+        <AbstractReveal paperId={p.id} />
+      )}
       {p.keywords.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {p.keywords.slice(0, 6).map((k) => (

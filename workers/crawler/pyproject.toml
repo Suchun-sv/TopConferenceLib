@@ -5,8 +5,10 @@ description = "Pulls papers from OpenReview / DBLP and pushes to the TCR Postgre
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.27",
+    "minio>=7.2",
     "openreview-py>=1.40",
     "psycopg[binary]>=3.2",
+    "pypdf>=4.0",
     "pydantic>=2.8",
     "litellm>=1.50",
     "python-dotenv>=1.0",
